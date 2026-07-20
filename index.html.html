@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversor SIPAC → SIGPAT</title>
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#f7f6f2;
+    --paper-raised:#ffffff;
+    --line:#d8d4c8;
+    --accent:#0d5c4a;
+    --accent-soft:#e3efe9;
+    --warn:#8a4b08;
+    --warn-soft:#fbeedd;
+    --error:#8c2f2f;
+    --error-soft:#fbe9e9;
+    --mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
+    --serif: "Source Serif 4", "Georgia", serif;
+    --sans: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.5;
+  }
+
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding:32px 24px 80px;
+  }
+
+  header.page-head{
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;
+    margin-bottom:28px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  .page-head .id{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+  }
+
+  h1{
+    font-family:var(--serif);
+    font-size:28px;
+    font-weight:600;
+    margin:4px 0 0;
+    letter-spacing:-0.01em;
+  }
+
+  .subtitle{
+    font-size:13px;
+    color:var(--ink-soft);
+    max-width:380px;
+    text-align:right;
+  }
+
+  .step{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:3px;
+    margin-bottom:18px;
+    overflow:hidden;
+  }
+
+  .step-head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+    background:#fbfaf7;
+  }
+
+  .step-num{
+    font-family:var(--mono);
+    font-size:12px;
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    border:1px solid var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  .step-head h2{
+    font-family:var(--serif);
+    font-size:16px;
+    font-weight:600;
+    margin:0;
+  }
+
+  .step-head .step-status{
+    margin-left:auto;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.04em;
+    color:var(--ink-soft);
+  }
+
+  .step-body{
+    padding:18px;
+  }
+
+  .step.disabled{ opacity:.45; pointer-events:none; }
+
+  /* dropzone */
+  .dropzone{
+    border:1.5px dashed var(--line);
+    border-radius:3px;
+    padding:28px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .dropzone input{ display:none; }
+  .dropzone .dz-label{
+    font-size:14px;
+    font-weight:500;
+  }
+  .dropzone .dz-sub{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+
+  .file-chip{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 14px;
+    background:var(--accent-soft);
+    border:1px solid var(--accent);
+    border-radius:3px;
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  .file-chip .dot{
+    width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;
+  }
+  .file-chip button{
+    margin-left:auto;
+    background:none;border:none;cursor:pointer;
+    color:var(--ink-soft);
+    font-size:12px;
+    text-decoration:underline;
+    font-family:var(--sans);
+  }
+
+  .field-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  @media (max-width:560px){ .field-grid{ grid-template-columns:1fr; } }
+
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .field .hint{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    font-weight:400;
+    text-transform:none;
+    letter-spacing:0;
+  }
+  .field input{
+    font-family:var(--mono);
+    font-size:14px;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:var(--paper-raised);
+    color:var(--ink);
+  }
+  .field input:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    border-color:var(--accent);
+  }
+  .field input.invalid{
+    border-color:var(--error);
+  }
+  .field .err{
+    font-size:11.5px;
+    color:var(--error);
+    display:none;
+  }
+  .field .err.show{ display:block; }
+
+  .btn{
+    font-family:var(--sans);
+    font-size:13.5px;
+    font-weight:600;
+    padding:10px 20px;
+    border-radius:3px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:#fff;
+    cursor:pointer;
+    transition:transform .08s, opacity .15s;
+  }
+  .btn:hover{ opacity:.88; }
+  .btn:active{ transform:translateY(1px); }
+  .btn:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+  }
+  .btn.secondary{
+    background:transparent;
+    color:var(--ink);
+  }
+  .btn.accent{
+    background:var(--accent);
+    border-color:var(--accent);
+  }
+
+  table.preview{
+    width:100%;
+    border-collapse:collapse;
+    font-family:var(--mono);
+    font-size:12px;
+  }
+  table.preview th{
+    text-align:left;
+    font-family:var(--sans);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--ink-soft);
+    border-bottom:1.5px solid var(--ink);
+    padding:6px 8px;
+    position:sticky; top:0;
+    background:var(--paper-raised);
+  }
+  table.preview td{
+    padding:6px 8px;
+    border-bottom:1px solid var(--line);
+    vertical-align:top;
+  }
+  table.preview td.num{ text-align:right; white-space:nowrap; }
+  table.preview tr.row-error td{ background:var(--error-soft); }
+  table.preview tr.row-warn td{ background:var(--warn-soft); }
+  table.preview input.edit-date{
+    font-family:var(--mono);
+    font-size:12px;
+    width:108px;
+    padding:4px 6px;
+    border:1px solid var(--line);
+    border-radius:2px;
+  }
+  .table-scroll{
+    max-height:420px;
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:3px;
+  }
+
+  .toolbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+  .toolbar .spacer{ flex:1; }
+
+  .badge{
+    font-family:var(--mono);
+    font-size:11px;
+    padding:3px 8px;
+    border-radius:20px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    border:1px solid var(--accent);
+  }
+  .badge.warn{
+    background:var(--warn-soft); color:var(--warn); border-color:var(--warn);
+  }
+  .badge.error{
+    background:var(--error-soft); color:var(--error); border-color:var(--error);
+  }
+
+  .alert{
+    padding:10px 14px;
+    border-radius:3px;
+    font-size:12.5px;
+    margin-bottom:12px;
+    border:1px solid;
+  }
+  .alert.warn{ background:var(--warn-soft); border-color:var(--warn); color:var(--warn); }
+  .alert.error{ background:var(--error-soft); border-color:var(--error); color:var(--error); }
+  .alert.info{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+  .layout-note{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--ink-soft);
+    background:#fbfaf7;
+    border:1px dashed var(--line);
+    padding:10px 12px;
+    border-radius:3px;
+    margin-top:10px;
+    white-space:pre;
+    overflow-x:auto;
+  }
+
+  .download-bar{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:18px;
+    background:var(--ink);
+    color:#fff;
+    border-radius:3px;
+    flex-wrap:wrap;
+  }
+  .download-bar .info{
+    font-size:12.5px;
+    color:#cbd5dd;
+  }
+  .download-bar .info strong{ color:#fff; }
+
+  .footer-note{
+    margin-top:28px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    border-top:1px solid var(--line);
+    padding-top:14px;
+  }
+
+  details summary{
+    cursor:pointer;
+    font-size:12.5px;
+    color:var(--accent);
+    font-weight:600;
+    margin-top:8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <div>
+      <div class="id">Patrimônio · Conversão de arquivo</div>
+      <h1>SIPAC → SIGPAT</h1>
+    </div>
+    <div class="subtitle">Converte o relatório de bens exportado do SIPAC para o layout de importação de patrimônio (.txt, largura fixa).</div>
+  </header>
+
+  <!-- STEP 1: upload -->
+  <section class="step" id="step1">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <h2>Arquivo do SIPAC</h2>
+      <div class="step-status" id="step1-status">aguardando arquivo</div>
+    </div>
+    <div class="step-body">
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept=".csv">
+        <div class="dz-label">Clique para selecionar o CSV, ou arraste aqui</div>
+        <div class="dz-sub">Relatório de Bens por Ordem de Numeração — exportado do SIPAC</div>
+      </div>
+      <div id="fileChipHolder" style="margin-top:10px;"></div>
+      <div id="uploadAlerts"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2: dados do setor -->
+  <section class="step disabled" id="step2">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <h2>Dados do setor e data</h2>
+      <div class="step-status" id="step2-status">—</div>
+    </div>
+    <div class="step-body">
+      <div class="field-grid">
+        <div class="field">
+          <label for="setorCodigo">Código do setor <span class="hint">(8 dígitos, conforme cadastro do SIGPAT)</span></label>
+          <input type="text" id="setorCodigo" maxlength="8" placeholder="ex: 00005681" inputmode="numeric">
+          <div class="err" id="err-setorCodigo">Informe exatamente 8 dígitos numéricos.</div>
+        </div>
+        <div class="field">
+          <label for="setorNome">Nome do setor <span class="hint">(até 30 caracteres)</span></label>
+          <input type="text" id="setorNome" maxlength="30" placeholder="ex: LAB. DE PESQ. DESEMPENHO HUMAN">
+          <div class="err" id="err-setorNome">Informe o nome do setor.</div>
+        </div>
+        <div class="field">
+          <label for="dataPadrao">Data dos itens <span class="hint">(o CSV do SIPAC não traz essa informação)</span></label>
+          <input type="date" id="dataPadrao">
+          <div class="err" id="err-dataPadrao">Informe uma data.</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn accent" id="btnProcessar" disabled>Gerar pré-visualização</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: preview -->
+  <section class="step disabled" id="step3">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <h2>Conferência</h2>
+      <div class="step-status" id="step3-status">—</div>
+    </div>
+    <div class="step-body">
+      <div id="previewAlerts"></div>
+      <div class="toolbar">
+        <span class="badge" id="badgeTotal">0 itens</span>
+        <span class="badge warn" id="badgeWarn" style="display:none;">0 avisos</span>
+        <span class="badge error" id="badgeError" style="display:none;">0 erros</span>
+        <div class="spacer"></div>
+        <button class="btn secondary" id="btnAplicarDataTodos">Aplicar data a todos</button>
+      </div>
+      <div class="table-scroll">
+        <table class="preview">
+          <thead>
+            <tr>
+              <th style="width:90px;">Patrimônio</th>
+              <th>Descrição (60 col.)</th>
+              <th style="width:130px;">Data</th>
+              <th style="width:110px;">Valor</th>
+              <th style="width:60px;"></th>
+            </tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+
+      <details>
+        <summary>Ver layout de largura fixa gerado</summary>
+        <div class="layout-note" id="layoutNote"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 4: download -->
+  <section class="step disabled" id="step4">
+    <div class="step-head">
+      <div class="step-num">4</div>
+      <h2>Exportar</h2>
+      <div class="step-status" id="step4-status">—</div>
+    </div>
+    <div class="step-body">
+      <div class="download-bar">
+        <button class="btn accent" id="btnDownload">Baixar arquivo .txt</button>
+        <div class="info" id="downloadInfo">—</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer-note">
+    Todo o processamento acontece no seu navegador — o arquivo não é enviado a nenhum servidor.
+    Layout de saída: linha de cabeçalho (código do setor, 8 díg. + nome, 30 col.) seguida de uma linha por item
+    (patrimônio 9 díg. + descrição 60 col. + data AAAAMMDD + valor em centavos, 15 díg.), terminadas em CRLF.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const state = {
+    csvRows: null,
+    items: [],     // {patrimonio, descricao, valorCentavos, valorOriginal, data, errors:[]}
+    setorCodigo: '',
+    setorNome: ''
+  };
+
+  const el = id => document.getElementById(id);
+  const dropzone = el('dropzone');
+  const fileInput = el('fileInput');
+  const uploadAlerts = el('uploadAlerts');
+  const fileChipHolder = el('fileChipHolder');
+
+  // ---------- Step enable/disable helpers ----------
+  function setStepEnabled(stepId, enabled){
+    const s = el(stepId);
+    if(enabled) s.classList.remove('disabled');
+    else s.classList.add('disabled');
+  }
+  function setStatus(stepId, text){
+    el(stepId + '-status').textContent = text;
+  }
+
+  // ---------- Dropzone ----------
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag');
+    if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => {
+    if(e.target.files.length) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(file){
+    uploadAlerts.innerHTML = '';
+    if(!file.name.toLowerCase().endsWith('.csv')){
+      uploadAlerts.innerHTML = '<div class="alert error">O arquivo precisa ser .csv (o relatório exportado do SIPAC).</div>';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        parseCsv(ev.target.result, file.name);
+      }catch(err){
+        uploadAlerts.innerHTML = '<div class="alert error">Não foi possível ler o arquivo: ' + escapeHtml(err.message) + '</div>';
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  // ---------- Minimal CSV parser (handles quoted fields with commas) ----------
+  function parseCsvLine(line){
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for(let i=0;i<line.length;i++){
+      const c = line[i];
+      if(inQuotes){
+        if(c === '"'){
+          if(line[i+1] === '"'){ cur += '"'; i++; }
+          else inQuotes = false;
+        } else cur += c;
+      } else {
+        if(c === '"') inQuotes = true;
+        else if(c === ','){ result.push(cur); cur=''; }
+        else cur += c;
+      }
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function parseCsv(text, filename){
+    // normalize line endings, drop BOM
+    text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g,'\n');
+    const lines = text.split('\n').filter(l => l.length>0);
+    if(lines.length < 3){
+      uploadAlerts.innerHTML = '<div class="alert error">O arquivo parece vazio ou não tem linhas suficientes (esperado: título, cabeçalho, dados).</div>';
+      return;
+    }
+
+    // Find header row: look for a line containing "Patrim" and "Descri"
+    let headerIdx = -1;
+    for(let i=0;i<Math.min(lines.length,5);i++){
+      if(/Patrim/i.test(lines[i]) && /Descri/i.test(lines[i])){
+        headerIdx = i; break;
+      }
+    }
+    if(headerIdx === -1){
+      uploadAlerts.innerHTML = '<div class="alert error">Não encontrei a linha de cabeçalho esperada (colunas "N° Patrimônio" e "Descrição"). Confirme se este é o relatório correto exportado do SIPAC.</div>';
+      return;
+    }
+
+    const header = parseCsvLine(lines[headerIdx]).map(h => h.trim());
+    const idxPatrimonio = header.findIndex(h => /Patrim/i.test(h));
+    const idxDescricao = header.findIndex(h => /Descri/i.test(h));
+    const idxValor = header.findIndex(h => /Valor\s*Entrada/i.test(h));
+
+    if(idxPatrimonio === -1 || idxDescricao === -1 || idxValor === -1){
+      uploadAlerts.innerHTML = '<div class="alert error">O cabeçalho do CSV não contém todas as colunas esperadas (Patrimônio, Descrição, Valor Entrada). Colunas encontradas: ' + escapeHtml(header.join(' | ')) + '</div>';
+      return;
+    }
+
+    const dataRows = [];
+    for(let i=headerIdx+1;i<lines.length;i++){
+      const cols = parseCsvLine(lines[i]);
+      if(cols.length < header.length) continue; // skip malformed/footer lines
+      const patrimonio = (cols[idxPatrimonio]||'').trim();
+      if(!/^\d+$/.test(patrimonio)) continue; // skip anything that's not a numeric patrimony code
+      dataRows.push({
+        patrimonio,
+        descricao: (cols[idxDescricao]||'').trim(),
+        valorOriginal: (cols[idxValor]||'').trim()
+      });
+    }
+
+    if(dataRows.length === 0){
+      uploadAlerts.innerHTML = '<div class="alert error">Nenhuma linha de item de patrimônio foi encontrada no arquivo.</div>';
+      return;
+    }
+
+    state.csvRows = dataRows;
+    fileChipHolder.innerHTML =
+      '<div class="file-chip"><span class="dot"></span>' + escapeHtml(filename) +
+      ' — ' + dataRows.length + ' itens encontrados' +
+      '<button id="btnRemoveFile">remover</button></div>';
+    el('btnRemoveFile').addEventListener('click', resetFile);
+
+    setStatus('step1', dataRows.length + ' itens carregados');
+    setStepEnabled('step2', true);
+    setStatus('step2', 'preencha os dados abaixo');
+    validateStep2();
+  }
+
+  function resetFile(){
+    state.csvRows = null;
+    fileChipHolder.innerHTML = '';
+    fileInput.value = '';
+    setStatus('step1', 'aguardando arquivo');
+    setStepEnabled('step2', false);
+    setStepEnabled('step3', false);
+    setStepEnabled('step4', false);
+  }
+
+  // ---------- Step 2: setor + data ----------
+  const setorCodigoInput = el('setorCodigo');
+  const setorNomeInput = el('setorNome');
+  const dataPadraoInput = el('dataPadrao');
+  const btnProcessar = el('btnProcessar');
+
+  // default date = today
+  (function(){
+    const d = new Date();
+    const iso = d.toISOString().slice(0,10);
+    dataPadraoInput.value = iso;
+  })();
+
+  [setorCodigoInput, setorNomeInput, dataPadraoInput].forEach(inp => {
+    inp.addEventListener('input', validateStep2);
+  });
+
+  function validateStep2(){
+    let ok = true;
+
+    const codigo = setorCodigoInput.value.trim();
+    const codigoOk = /^\d{8}$/.test(codigo);
+    setorCodigoInput.classList.toggle('invalid', codigo.length>0 && !codigoOk);
+    el('err-setorCodigo').classList.toggle('show', codigo.length>0 && !codigoOk);
+    if(!codigoOk) ok = false;
+
+    const nome = setorNomeInput.value.trim();
+    setorNomeInput.classList.toggle('invalid', false);
+    el('err-setorNome').classList.toggle('show', false);
+    if(nome.length === 0) ok = false;
+
+    const data = dataPadraoInput.value;
+    if(!data) ok = false;
+
+    btnProcessar.disabled = !ok || !state.csvRows;
+    return ok;
+  }
+
+  btnProcessar.addEventListener('click', () => {
+    state.setorCodigo = setorCodigoInput.value.trim();
+    state.setorNome = setorNomeInput.value.trim();
+    const dataPadrao = dataPadraoInput.value; // yyyy-mm-dd
+    buildItems(dataPadrao);
+    renderPreview();
+    setStepEnabled('step3', true);
+    setStatus('step2', 'concluído');
+    setStatus('step3', 'revise antes de exportar');
+  });
+
+  // ---------- Build items (apply layout rules) ----------
+  function isoToYyyymmdd(iso){
+    if(!iso) return null;
+    const [y,m,d] = iso.split('-');
+    return y+m+d;
+  }
+  function yyyymmddToIso(s){
+    if(!s || s.length!==8) return '';
+    return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+  }
+
+  function parseValorToCentavos(valorStr){
+    // input like "R$ 1.855,00" -> 185500
+    if(!valorStr) return null;
+    let v = valorStr.replace('R$','').trim();
+    v = v.replace(/\./g,'').replace(',', '.');
+    const num = parseFloat(v);
+    if(isNaN(num)) return null;
+    return Math.round(num * 100);
+  }
+
+  function buildItems(dataPadraoIso){
+    const dataPadrao = isoToYyyymmdd(dataPadraoIso);
+    state.items = state.csvRows.map(row => {
+      const errors = [];
+      const warnings = [];
+
+      // patrimonio -> 9 digits
+      let patrimonio = row.patrimonio;
+      if(patrimonio.length > 9){
+        errors.push('Número de patrimônio tem mais de 9 dígitos');
+      }
+      patrimonio = patrimonio.padStart(9,'0').slice(-9);
+
+      // descricao -> 60 chars, truncate or pad
+      let descricao = row.descricao.toUpperCase();
+      if(descricao.length > 60){
+        warnings.push('Descrição truncada para 60 caracteres');
+        descricao = descricao.slice(0,60);
+      } else {
+        descricao = descricao.padEnd(60, ' ');
+      }
+
+      // valor -> centavos, 15 digits
+      const centavos = parseValorToCentavos(row.valorOriginal);
+      if(centavos === null){
+        errors.push('Valor "' + row.valorOriginal + '" não pôde ser convertido');
+      }
+      const valorStr = centavos === null ? null : String(centavos).padStart(15,'0');
+      if(valorStr && valorStr.length > 15){
+        errors.push('Valor excede 15 dígitos após conversão');
+      }
+
+      return {
+        patrimonioRaw: row.patrimonio,
+        patrimonio,
+        descricaoRaw: row.descricao,
+        descricao,
+        valorOriginal: row.valorOriginal,
+        valorCentavos: valorStr,
+        data: dataPadrao,
+        errors,
+        warnings
+      };
+    });
+  }
+
+  // ---------- Render preview table ----------
+  const previewBody = el('previewBody');
+
+  function renderPreview(){
+    previewBody.innerHTML = '';
+    let errCount = 0, warnCount = 0;
+
+    state.items.forEach((item, idx) => {
+      const tr = document.createElement('tr');
+      if(item.errors.length){ tr.classList.add('row-error'); errCount++; }
+      else if(item.warnings.length){ tr.classList.add('row-warn'); warnCount++; }
+
+      const tdPat = document.createElement('td');
+      tdPat.textContent = item.patrimonio;
+      tdPat.title = item.patrimonioRaw;
+
+      const tdDesc = document.createElement('td');
+      tdDesc.textContent = item.descricao.trim();
+      if(item.warnings.length) tdDesc.title = item.warnings.join('; ');
+
+      const tdData = document.createElement('td');
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.className = 'edit-date';
+      dateInput.value = yyyymmddToIso(item.data);
+      dateInput.addEventListener('input', () => {
+        item.data = isoToYyyymmdd(dateInput.value) || item.data;
+        updatePreviewMeta();
+      });
+      tdData.appendChild(dateInput);
+
+      const tdValor = document.createElement('td');
+      tdValor.className = 'num';
+      tdValor.textContent = item.valorOriginal || '—';
+      if(item.errors.length) tdValor.title = item.errors.join('; ');
+
+      const tdFlag = document.createElement('td');
+      if(item.errors.length) tdFlag.innerHTML = '<span class="badge error" title="'+escapeHtml(item.errors.join('; '))+'">erro</span>';
+      else if(item.warnings.length) tdFlag.innerHTML = '<span class="badge warn" title="'+escapeHtml(item.warnings.join('; '))+'">aviso</span>';
+
+      tr.appendChild(tdPat);
+      tr.appendChild(tdDesc);
+      tr.appendChild(tdData);
+      tr.appendChild(tdValor);
+      tr.appendChild(tdFlag);
+      previewBody.appendChild(tr);
+    });
+
+    updatePreviewMeta();
+    renderLayoutNote();
+  }
+
+  function updatePreviewMeta(){
+    const total = state.items.length;
+    const errCount = state.items.filter(i => i.errors.length).length;
+    const warnCount = state.items.filter(i => !i.errors.length && i.warnings.length).length;
+
+    el('badgeTotal').textContent = total + (total===1?' item':' itens');
+    el('badgeError').style.display = errCount ? 'inline-block' : 'none';
+    el('badgeError').textContent = errCount + (errCount===1?' erro':' erros');
+    el('badgeWarn').style.display = warnCount ? 'inline-block' : 'none';
+    el('badgeWarn').textContent = warnCount + (warnCount===1?' aviso':' avisos');
+
+    const alertsEl = el('previewAlerts');
+    if(errCount > 0){
+      alertsEl.innerHTML = '<div class="alert error">' + errCount + ' item(ns) com erro não serão incluídos no arquivo final. Revise os campos marcados.</div>';
+    } else if(warnCount > 0){
+      alertsEl.innerHTML = '<div class="alert warn">' + warnCount + ' item(ns) com descrição truncada para caber no layout de 60 colunas. Confira se ainda ficaram compreensíveis.</div>';
+    } else {
+      alertsEl.innerHTML = '<div class="alert info">Todos os itens passaram pela conversão sem problemas.</div>';
+    }
+
+    setStatus('step3', (total-errCount) + ' de ' + total + ' itens prontos para exportar');
+    setStepEnabled('step4', (total - errCount) > 0);
+    setStatus('step4', (total-errCount) + ' itens no arquivo');
+    el('downloadInfo').innerHTML = 'Setor <strong>' + escapeHtml(state.setorCodigo) + '</strong> — ' +
+      escapeHtml(state.setorNome) + ' · <strong>' + (total-errCount) + '</strong> itens válidos';
+  }
+
+  function renderLayoutNote(){
+    el('layoutNote').textContent =
+      'Cabeçalho : [codigo setor 8] + [nome setor 30, espaço-preenchido] = 38 colunas\n' +
+      'Item      : [patrimônio 9] + [descrição 60] + [data AAAAMMDD 8] + [valor centavos 15] = 92 colunas\n' +
+      'Fim de linha: CRLF (\\r\\n) em todas as linhas, incluindo a última.';
+  }
+
+  el('btnAplicarDataTodos').addEventListener('click', () => {
+    const dateInputs = previewBody.querySelectorAll('input.edit-date');
+    if(dateInputs.length === 0) return;
+    const firstVal = dateInputs[0].value;
+    if(!firstVal) return;
+    dateInputs.forEach((inp, idx) => {
+      inp.value = firstVal;
+      state.items[idx].data = isoToYyyymmdd(firstVal);
+    });
+    updatePreviewMeta();
+  });
+
+  // ---------- Build final fixed-width TXT ----------
+  function buildTxt(){
+    const codigo = state.setorCodigo.padStart(8,'0').slice(-8);
+    const nome = state.setorNome.toUpperCase().padEnd(30,' ').slice(0,30);
+    let out = codigo + nome;
+
+    const validItems = state.items.filter(i => i.errors.length === 0);
+    const lines = [out];
+    validItems.forEach(item => {
+      const line = item.patrimonio + item.descricao + item.data + item.valorCentavos;
+      lines.push(line);
+    });
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  el('btnDownload').addEventListener('click', () => {
+    const txt = buildTxt();
+    const blob = new Blob([txt], {type:'text/plain;charset=windows-1252'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    a.href = url;
+    a.download = 'apat_' + state.setorCodigo + '_' + today + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+})();
+</script>
+</body>
+</html>
