@@ -447,7 +447,7 @@
         <table class="preview">
           <thead>
             <tr>
-              <th style="width:90px;">Patrimônio</th>
+              <th style="width:105px;" title="8 dígitos do SIPAC + dígito verificador (Módulo 11) em verde">Patrimônio (+DV)</th>
               <th>Descrição (60 col.)</th>
               <th style="width:130px;">Data</th>
               <th style="width:110px;">Valor</th>
@@ -482,8 +482,10 @@
 
   <div class="footer-note">
     Todo o processamento acontece no seu navegador — o arquivo não é enviado a nenhum servidor.
-    Layout de saída: linha de cabeçalho (código do setor, 8 díg. + nome, 30 col.) seguida de uma linha por item
-    (patrimônio 9 díg. + descrição 60 col. + data AAAAMMDD + valor em centavos, 15 díg.), terminadas em CRLF.
+    Layout de saída: linha de cabeçalho (código do setor 8 díg. + nome 30 col.) seguida de uma linha por item
+    (patrimônio 9 díg. + descrição 60 col. + data AAAAMMDD + valor centavos 15 díg.), terminadas em CRLF.
+    O 9º dígito do patrimônio é o dígito verificador calculado automaticamente por Módulo 11
+    (pesos cíclicos 2–9, direita→esquerda) a partir dos 8 dígitos exportados pelo SIPAC.
   </div>
 
 </div>
@@ -686,6 +688,19 @@
     setStatus('step3', 'revise antes de exportar');
   });
 
+  // ---------- Dígito verificador — Módulo 11 (pesos cíclicos 2–9, direita→esquerda) ----------
+  // O SIPAC exporta 8 dígitos; o SIGPAT espera 9 (8 + DV).
+  function calcDV(base8) {
+    const digits = base8.split('').map(Number);
+    let soma = 0, peso = 2;
+    for (let i = digits.length - 1; i >= 0; i--) {
+      soma += digits[i] * peso;
+      peso = peso < 9 ? peso + 1 : 2;
+    }
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  }
+
   // ---------- Build items (apply layout rules) ----------
   function isoToYyyymmdd(iso){
     if(!iso) return null;
@@ -713,12 +728,14 @@
       const errors = [];
       const warnings = [];
 
-      // patrimonio -> 9 digits
-      let patrimonio = row.patrimonio;
-      if(patrimonio.length > 9){
-        errors.push('Número de patrimônio tem mais de 9 dígitos');
+      // patrimonio: SIPAC exporta 8 dígitos (sem DV). Calcula DV por Módulo 11 e anexa.
+      let patrimonio = row.patrimonio.padStart(8, '0');
+      if (patrimonio.length > 8) {
+        errors.push('Número de patrimônio tem mais de 8 dígitos — verifique se o CSV é do SIPAC');
+      } else {
+        const dv = calcDV(patrimonio);
+        patrimonio = patrimonio + String(dv);
       }
-      patrimonio = patrimonio.padStart(9,'0').slice(-9);
 
       // descricao -> 60 chars, truncate or pad
       let descricao = row.descricao.toUpperCase();
@@ -766,8 +783,11 @@
       else if(item.warnings.length){ tr.classList.add('row-warn'); warnCount++; }
 
       const tdPat = document.createElement('td');
-      tdPat.textContent = item.patrimonio;
-      tdPat.title = item.patrimonioRaw;
+      // exibe os 8 dígitos base + DV em destaque
+      const base8 = item.patrimonio.slice(0, 8);
+      const dv    = item.patrimonio.slice(8);
+      tdPat.innerHTML = base8 + '<span style="font-weight:700;color:var(--accent);" title="Dígito verificador calculado (Módulo 11)">'+dv+'</span>';
+      tdPat.title = 'Base SIPAC: ' + item.patrimonioRaw + ' → DV calculado: ' + dv;
 
       const tdDesc = document.createElement('td');
       tdDesc.textContent = item.descricao.trim();
